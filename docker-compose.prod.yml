@@ -19,22 +19,33 @@ services:
       timeout: 5s
       retries: 5
 
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: tro_go_api_prod
-    restart: always
-    ports:
-      - "8080:8080"
-    environment:
-      APP_PORT: ${APP_PORT:-8080}
-      DATABASE_URL: ${DATABASE_URL:-postgres://motel_admin:MatKhauSieuKho123!@#@db:5432/motel_db?sslmode=disable}
-      DB_MAX_CONNS: ${DB_MAX_CONNS:-50}
-      JWT_SECRET: ${JWT_SECRET:-mot_chuoi_bi_mat_rat_dai_cho_jwt_token}
-    depends_on:
-      db:
-        condition: service_healthy
-
-volumes:
-  postgres_data_prod:
+    api:
+      build: 
+        context: .
+        dockerfile: Dockerfile
+      container_name: tro_go_api_prod
+      restart: always
+      # XÓA DÒNG PORTS ĐI, KHÔNG MỞ 8080 RA NGOÀI NỮA
+      environment:
+        APP_PORT: ${APP_PORT:-8080}
+        DATABASE_URL: ${DATABASE_URL:-postgres://motel_admin:MatKhauSieuKho123!@#@db:5432/motel_db?sslmode=disable}
+        DB_MAX_CONNS: ${DB_MAX_CONNS:-50}
+        JWT_SECRET: ${JWT_SECRET:-mot_chuoi_bi_mat_rat_dai_cho_jwt_token}
+      depends_on:
+        db:
+          condition: service_healthy
+  
+    # THÊM SERVICE NGINX VÀO ĐÂY
+    nginx:
+      image: nginx:alpine
+      container_name: tro_go_nginx_prod
+      restart: always
+      ports:
+        - "80:80" # Chỉ mở duy nhất cổng 80 ra Internet
+      volumes:
+        # Lấy file cấu hình vừa viết nạp vào Nginx
+        - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      depends_on:
+        - api
+  
+  volumes:  postgres_data_prod:
