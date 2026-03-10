@@ -5,7 +5,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-tro_admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-mot_mat_khau_sieu_kho_123!@!@#}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mot_mat_khau_sieu_kho_123!@}
       POSTGRES_DB: ${DB_NAME:-tro_go_db}
     ports:
       - "5433:5432"
@@ -25,7 +25,7 @@ services:
     restart: always
     environment:
       APP_PORT: ${APP_PORT:-8080}
-      DATABASE_URL: ${DATABASE_URL:-postgres://tro_admin:mot_mat_khau_sieu_kho_123!@!@#@db:5432/tro_go_db?sslmode=disable}
+      DATABASE_URL: ${DATABASE_URL:-postgres://tro_admin:mot_mat_khau_sieu_kho_123!@db:5432/tro_go_db?sslmode=disable}
       DB_MAX_CONNS: ${DB_MAX_CONNS:-50}
       JWT_SECRET: ${JWT_SECRET:-mot_chuoi_bi_mat_rat_dai_cho_jwt_token}
     depends_on:
