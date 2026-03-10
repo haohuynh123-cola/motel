@@ -4,15 +4,15 @@ services:
     container_name: tro_go_db_prod
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER:-motel_admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-MatKhauSieuKho123!@#}
-      POSTGRES_DB: ${DB_NAME:-motel_db}
+      POSTGRES_USER: ${DB_USER:-tro_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mot_mat_khau_sieu_kho_123!@!@#}
+      POSTGRES_DB: ${DB_NAME:-tro_go_db}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-motel_admin} -d ${DB_NAME:-motel_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-tro_admin} -d ${DB_NAME:-tro_go_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
