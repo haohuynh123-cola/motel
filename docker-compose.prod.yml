@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-MatKhauSieuKho123!@#}
       POSTGRES_DB: ${DB_NAME:-motel_db}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,7 @@ services:
       retries: 5
 
   api:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     container_name: tro_go_api_prod
