@@ -27,6 +27,8 @@ WORKDIR /app
 COPY --from=builder /app/api .
 # Copy the SSL certificates
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Copy thư mục migrations vào image cuối cùng
+COPY --from=builder /app/db/migrations ./db/migrations
 
 # Expose port 8080
 EXPOSE 8080
