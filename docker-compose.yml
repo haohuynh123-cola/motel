@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: tro_go_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${DB_NAME:-tro_go}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tro_go"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: golang:1.24-alpine
+    container_name: tro_go_api
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "go install github.com/cosmtrek/air@v1.51.0 && air -c .air.toml"
+    ports:
+      - "8080:8080"
+    environment:
+      APP_PORT: 8080
+      DATABASE_URL: "postgres://postgres:postgrespassword@db:5432/tro_go?sslmode=disable"
+      DB_MAX_CONNS: 20
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

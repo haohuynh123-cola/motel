@@ -1,0 +1,145 @@
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	echojwt "github.com/labstack/echo-jwt/v4"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+
+	"tro-go/internal/adapter/db/postgres"
+	"tro-go/internal/adapter/handler"
+	"tro-go/internal/adapter/repository"
+	"tro-go/internal/usecase"
+	"tro-go/pkg/config"
+)
+
+func runMigrations(dbURL string) {
+	log.Println("Running database migrations...")
+
+	var m *migrate.Migrate
+	var err error
+
+	// Retry logic (Thử lại 5 lần, mỗi lần cách nhau 2 giây)
+	for i := 0; i < 5; i++ {
+		m, err = migrate.New("file://db/migrations", dbURL)
+		if err == nil {
+			break
+		}
+		log.Printf("Migration: Waiting for database... (attempt %d/5)\n", i+1)
+		time.Sleep(2 * time.Second)
+	}
+
+	if err != nil {
+		log.Fatalf("Could not create migration instance after retries: %v", err)
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("Could not run up migrations: %v", err)
+	}
+	log.Println("Database migrations completed successfully.")
+}
+
+func main() {
+	// 1. Load Configuration
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// 2. Run Migrations Automatically
+	runMigrations(cfg.DatabaseURL)
+
+	// 3. Setup Context for Application Lifecycle
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// 4. Setup Database Connection Pool
+	dbPool, err := postgres.ConnectPool(ctx, cfg.DatabaseURL, cfg.MaxConns)
+	if err != nil {
+		log.Fatalf("Database connection failed: %v", err)
+	}
+	defer dbPool.Close()
+
+	// 5. Instantiate Repositories
+	houseRepo := repository.NewHouseRepository(dbPool)
+	roomRepo := repository.NewRoomRepository(dbPool)
+	userRepo := repository.NewUserRepository(dbPool)
+
+	// 6. Instantiate UseCases
+	houseUseCase := usecase.NewHouseUseCase(houseRepo)
+	roomUseCase := usecase.NewRoomUseCase(roomRepo)
+	userUseCase := usecase.NewUserUseCase(userRepo, cfg.JwtSecret)
+
+	// 7. Setup Echo HTTP Server
+	e := echo.New()
+
+	// Middleware
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
+
+	// Health Check Route
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+	})
+
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "API đang hoạt động! Chào mừng bạn đến với Tro-Go API.")
+	})
+
+	// 8. Register API Handlers
+	v1 := e.Group("/api/v1")
+
+	// Public routes (Không cần đăng nhập)
+	// Truyền nguyên group v1 vào, trong UserHandler đã có /auth/register và /auth/login
+	handler.NewUserHandler(v1, userUseCase)
+
+	// Protected routes (Bắt buộc phải có token JWT)
+	// Tạo một group song song, nhưng đính kèm middleware JWT
+	houseGroup := v1.Group("/api/v1")
+	houseGroup.Use(echojwt.WithConfig(echojwt.Config{
+		SigningKey: []byte(cfg.JwtSecret),
+		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+			return new(jwt.MapClaims)
+		},
+	}))
+
+	handler.NewHouseHandler(houseGroup, houseUseCase)
+	handler.NewRoomHandler(houseGroup, roomUseCase)
+	handler.NewProtectedUserHandler(houseGroup, userUseCase)
+
+	// 9. Start Server with Graceful Shutdown
+	go func() {
+		if err := e.Start(":" + cfg.AppPort); err != nil && err != http.ErrServerClosed {
+			e.Logger.Fatal("Shutting down the server:", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Gracefully shutting down server...")
+
+	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelShutdown()
+
+	if err := e.Shutdown(ctxShutdown); err != nil {
+		e.Logger.Fatal("Server forced to shutdown:", err)
+	}
+
+	log.Println("Server exiting")
+}
