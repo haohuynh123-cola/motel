@@ -20,7 +20,7 @@ services:
       retries: 5
 
     api:
-      build: 
+      build:
         context: .
         dockerfile: Dockerfile
       container_name: tro_go_api_prod
@@ -34,7 +34,7 @@ services:
       depends_on:
         db:
           condition: service_healthy
-  
+
     # THÊM SERVICE NGINX VÀO ĐÂY
     nginx:
       image: nginx:alpine
@@ -47,5 +47,5 @@ services:
         - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
       depends_on:
         - api
-  
-  volumes:  postgres_data_prod:
+
+  volumes:  postgres_data_prod
