@@ -1,26 +1,26 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
     container_name: tro_go_db_prod
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      # Nếu không có biến DB_USER trong .env, mặc định dùng motel_admin
+      POSTGRES_USER: ${DB_USER:-motel_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-MatKhauSieuKho123!@#}
+      POSTGRES_DB: ${DB_NAME:-motel_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      # Lệnh kiểm tra cũng dùng giá trị dự phòng tương ứng
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-motel_admin} -d ${DB_NAME:-motel_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   api:
-    build:
+    build: 
       context: .
       dockerfile: Dockerfile
     container_name: tro_go_api_prod
@@ -28,10 +28,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      APP_PORT: ${APP_PORT}
-      DATABASE_URL: "postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable"
-      DB_MAX_CONNS: ${DB_MAX_CONNS}
-      JWT_SECRET: ${JWT_SECRET}
+      APP_PORT: ${APP_PORT:-8080}
+      DATABASE_URL: ${DATABASE_URL:-postgres://motel_admin:MatKhauSieuKho123!@#@db:5432/motel_db?sslmode=disable}
+      DB_MAX_CONNS: ${DB_MAX_CONNS:-50}
+      JWT_SECRET: ${JWT_SECRET:-mot_chuoi_bi_mat_rat_dai_cho_jwt_token}
     depends_on:
       db:
         condition: service_healthy
