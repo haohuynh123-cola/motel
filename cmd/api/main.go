@@ -76,11 +76,15 @@ func main() {
 	houseRepo := repository.NewHouseRepository(dbPool)
 	roomRepo := repository.NewRoomRepository(dbPool)
 	userRepo := repository.NewUserRepository(dbPool)
+	customerRepo := repository.NewCustomerRepository(dbPool)
+	contractRepo := repository.NewContractRepository(dbPool)
 
 	// 6. Instantiate UseCases
 	houseUseCase := usecase.NewHouseUseCase(houseRepo)
 	roomUseCase := usecase.NewRoomUseCase(roomRepo)
 	userUseCase := usecase.NewUserUseCase(userRepo, cfg.JwtSecret)
+	customerUseCase := usecase.NewCustomerUseCase(customerRepo)
+	contractUseCase := usecase.NewContractUseCase(contractRepo, roomRepo, customerRepo)
 
 	// 7. Setup Echo HTTP Server
 	e := echo.New()
@@ -126,12 +130,10 @@ func main() {
 	v1 := e.Group("/api/v1")
 
 	// Public routes (Không cần đăng nhập)
-	// Truyền nguyên group v1 vào, trong UserHandler đã có /auth/register và /auth/login
 	handler.NewUserHandler(v1, userUseCase)
 
 	// Protected routes (Bắt buộc phải có token JWT)
-	// Tạo một group song song, nhưng đính kèm middleware JWT
-	houseGroup := v1.Group("/api/v1")
+	houseGroup := v1.Group("") // Group này dùng chung tiền tố /api/v1 từ v1
 	houseGroup.Use(echojwt.WithConfig(echojwt.Config{
 		SigningKey: []byte(cfg.JwtSecret),
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
@@ -142,6 +144,8 @@ func main() {
 	handler.NewHouseHandler(houseGroup, houseUseCase)
 	handler.NewRoomHandler(houseGroup, roomUseCase)
 	handler.NewProtectedUserHandler(houseGroup, userUseCase)
+	handler.NewCustomerHandler(houseGroup, customerUseCase)
+	handler.NewContractHandler(houseGroup, contractUseCase)
 
 	// 9. Start Server with Graceful Shutdown
 	go func() {

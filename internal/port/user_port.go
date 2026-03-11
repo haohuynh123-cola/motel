@@ -2,9 +2,13 @@ package port
 
 import (
 	"context"
+	"errors"
 
 	"tro-go/internal/domain"
 )
+
+var ErrNotFound = errors.New("not found")
+var ErrUsernameAlreadyExists = errors.New("username already exists")
 
 type UserRepository interface {
 	Create(ctx context.Context, user *domain.User) error

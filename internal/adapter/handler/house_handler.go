@@ -15,13 +15,13 @@ type HouseHandler struct {
 	houseUseCase port.HouseUseCase
 }
 
-func NewHouseHandler(e *echo.Group, uc port.HouseUseCase) {
-	handler := &HouseHandler{houseUseCase: uc}
+func NewHouseHandler(e *echo.Group, houseUseCase port.HouseUseCase) {
+	handler := &HouseHandler{houseUseCase: houseUseCase}
 	e.POST("/houses", handler.Create)
 	e.GET("/houses/:id", handler.GetByID)
 	e.GET("/houses", handler.List)
 	e.PUT("/houses/:id", handler.Update)
-	
+
 	// Chỉ người có quyền house:delete mới được xoá nhà
 	e.DELETE("/houses/:id", handler.Delete, PermissionMiddleware("house:delete"))
 }

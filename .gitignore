@@ -1,1 +1,19 @@
+# environment
 .env
+
+# macOS
+.DS_Store
+
+# dependencies
+vendor/
+
+# build
+/bin
+/build
+
+# temp
+tmp/
+
+# IDE
+.vscode/
+.idea/

@@ -26,9 +26,13 @@ func NewUserUseCase(userRepo port.UserRepository, jwtSecret string) port.UserUse
 
 func (u *userUseCase) Register(ctx context.Context, user *domain.User) error {
 	// Kiểm tra username đã tồn tại chưa
-	_, err := u.userRepo.GetByUsername(ctx, user.Username)
-	if err == nil {
-		return errors.New("username already exists")
+	userExist, err := u.userRepo.GetByUsername(ctx, user.Username)
+	if err != nil && !errors.Is(err, port.ErrNotFound) {
+		return err
+	}
+
+	if userExist != nil {
+		return port.ErrUsernameAlreadyExists
 	}
 
 	// Mã hoá (Hash) mật khẩu trước khi lưu vào database

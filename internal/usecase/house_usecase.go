@@ -2,9 +2,10 @@ package usecase
 
 import (
 	"context"
-
+	"fmt"
 	"tro-go/internal/domain"
 	"tro-go/internal/port"
+	"tro-go/pkg/contextutil"
 )
 
 type houseUseCase struct {
@@ -19,6 +20,15 @@ func NewHouseUseCase(houseRepo port.HouseRepository) port.HouseUseCase {
 }
 
 func (u *houseUseCase) CreateHouse(ctx context.Context, house *domain.House) error {
+	// Lấy userID từ context một cách xịn xò
+	userID, ok := contextutil.GetUserID(ctx)
+	if !ok {
+		return fmt.Errorf("không tìm thấy thông tin người dùng trong hệ thống")
+	}
+
+	// In ra để debug (Sau này bạn có thể gán house.OwnerID = userID)
+	fmt.Printf("User %d đang tạo nhà trọ: %s\n", userID, house.Name)
+
 	return u.houseRepo.Create(ctx, house)
 }
 

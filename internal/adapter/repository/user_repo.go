@@ -68,7 +68,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*d
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errors.New("user not found")
+			return nil, port.ErrNotFound
 		}
 		return nil, err
 	}
