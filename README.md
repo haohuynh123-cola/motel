@@ -1,112 +1,100 @@
 # Tro-Go API 🏠
 
-Tro-Go là một hệ thống Backend API hiệu năng cao được xây dựng bằng ngôn ngữ **Go (Golang)**, chuyên dùng để quản lý hệ thống Nhà trọ và Phòng trọ. 
+Tro-Go là một hệ thống Backend API hiệu năng cao được xây dựng bằng ngôn ngữ **Go (Golang)**, chuyên dùng để quản lý hệ thống Nhà trọ và Phòng trọ.
 
-Dự án này được thiết kế theo tiêu chuẩn của hệ thống lớn, tuân thủ nghiêm ngặt **Kiến trúc Sạch (Clean Architecture / Hexagonal Architecture)**, giúp mã nguồn dễ dàng bảo trì, mở rộng và viết Unit Test độc lập với các framework bên ngoài.
+Dự án này được thiết kế theo tiêu chuẩn công nghiệp, tuân thủ nghiêm ngặt **Kiến trúc Sạch (Clean Architecture)** và tích hợp quy trình **CI/CD** hiện đại.
 
 ---
 
 ## 🏗 Kiến trúc Hệ thống (Clean Architecture)
 
-Luồng dữ liệu của hệ thống được chia thành 4 tầng rành mạch, đi từ ngoài vào trong:
+Luồng dữ liệu của hệ thống được chia thành 4 tầng rành mạch:
 
-1. **Adapter / Handler (Tầng Giao tiếp):** Sử dụng `Echo framework` để xử lý HTTP Request/Response. Chịu trách nhiệm nhận JSON, kiểm tra tính hợp lệ cơ bản và trả về kết quả cho Client.
-2. **UseCase (Tầng Nghiệp vụ):** Trái tim của ứng dụng. Chứa toàn bộ các quy tắc kinh doanh (Business Logic) như kiểm tra quyền hạn, mã hóa mật khẩu, tính toán. Tầng này hoàn toàn không biết sự tồn tại của Echo hay PostgreSQL.
-3. **Port (Tầng Giao diện/Hợp đồng):** Chứa các `Interface`. Đóng vai trò là cầu nối (Dependency Injection) giữa UseCase và Repository, giúp dễ dàng Mock data khi viết Test.
-4. **Adapter / Repository (Tầng Dữ liệu):** Xử lý giao tiếp trực tiếp với cơ sở dữ liệu (PostgreSQL) thông qua các câu lệnh SQL thuần được tối ưu hóa bằng thư viện `pgx`.
+1. **Adapter / Handler:** Xử lý HTTP Request/Response (Echo Framework).
+2. **UseCase:** Chứa toàn bộ logic nghiệp vụ (Auth, Email, RBAC).
+3. **Port:** Định nghĩa các Interface để kết nối các tầng.
+4. **Adapter / Repository:** Làm việc trực tiếp với Database (PostgreSQL).
 
 ---
 
 ## 🛠 Công nghệ sử dụng (Tech Stack)
 
-*   **Ngôn ngữ:** Go 1.24+
-*   **Web Framework:** [Echo v4](https://echo.labstack.com/) (Siêu nhẹ, tốc độ cao).
-*   **Database:** PostgreSQL 15.
-*   **Database Driver:** `jackc/pgx/v5` (Driver mạnh mẽ nhất cho Postgres trong Go, hỗ trợ Connection Pooling).
-*   **Quản lý Database Schema:** `golang-migrate` (Tự động chạy Migration khi khởi động Server).
-*   **Bảo mật & Phân quyền:** JWT (JSON Web Tokens) kết hợp với mô hình **RBAC** (Role-Based Access Control) 5 bảng.
-*   **Môi trường (DevOps):** Docker & Docker Compose (Hỗ trợ Hot-Reloading với `Air`).
+*   **Backend:** Go 1.24+ (Web framework Echo v4).
+*   **Database:** PostgreSQL 15 + `jackc/pgx/v5`.
+*   **Migration:** `golang-migrate` (Tự động tạo bảng khi khởi động).
+*   **Bảo mật:** JWT (JSON Web Tokens) + Bcrypt (Mã hóa mật khẩu).
+*   **Phân quyền:** RBAC (Role-Based Access Control) mô hình 5 bảng linh hoạt.
+*   **Email:** Giao thức SMTP (Tích hợp sẵn template HTML).
+*   **DevOps:** Docker, GitHub Actions (CI/CD), Nginx.
 
 ---
 
-## 🌟 Tính năng cốt lõi
+## 🌟 Tính năng nổi bật
 
-*   **Xác thực (Authentication):** Đăng ký, Đăng nhập, trả về Token JWT an toàn.
-*   **Phân quyền (Authorization - RBAC):** Hệ thống phân quyền động dựa trên Role và Permission (VD: `admin` có quyền `house:delete`, `member` thì không). Bảo vệ API bằng Middleware tự chế.
-*   **Quản lý Nhà (Houses):** CRUD danh sách các tòa nhà trọ.
-*   **Quản lý Phòng (Rooms):** CRUD danh sách phòng trọ, liên kết trực tiếp với từng Tòa nhà (Foreign Key).
+*   ✅ **Xác thực đa lớp:** Đăng ký, Đăng nhập và quản lý phiên làm việc qua JWT.
+*   ✅ **Phân quyền chi tiết:** Phân quyền theo từng hành động (VD: Chỉ admin mới được xoá nhà, member chỉ được xem).
+*   ✅ **Gửi Email tự động:** API nhắc nợ tiền phòng hàng tháng, tự động lấy thông tin giá tiền và gửi mail HTML chuyên nghiệp.
+*   ✅ **Kiểm thử tự động:** Hệ thống Unit Test tích hợp sẵn kỹ thuật Mocking để test logic không cần DB.
+*   ✅ **CI/CD chuẩn:** Tự động chạy Test và Deploy lên VPS mỗi khi Push code lên Github.
 
 ---
 
 ## ⚙️ Cấu hình Hệ thống (.env)
 
-Hệ thống đọc cấu hình tự động thông qua file `.env`. Nếu chạy bằng Docker, bạn chỉ cần tạo một file `.env` ở thư mục gốc của dự án.
+Tạo file `.env` tại thư mục gốc với các thông số sau:
 
 ```env
-# Cổng chạy API Server
+# Cổng chạy API
 APP_PORT=8080
 
-# Chuỗi kết nối đến PostgreSQL (Sử dụng tên service 'db' nếu chạy trong Docker)
-DATABASE_URL=postgres://postgres:postgrespassword@db:5432/tro_go?sslmode=disable
-
-# Số lượng kết nối tối đa giữ trong Pool (Tối ưu chịu tải)
+# Kết nối Database
+DATABASE_URL=postgres://user:pass@db:5432/dbname?sslmode=disable
 DB_MAX_CONNS=20
 
-# Khóa bí mật dùng để ký và giải mã JWT Token (Đổi mã này trên Production!)
-JWT_SECRET=my-super-secret-key-change-it-in-production
+# Bảo mật JWT
+JWT_SECRET=your_super_secret_key
+
+# Cấu hình Gửi Email (Gmail SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password_16_chars
 ```
 
 ---
 
-## 🚀 Hướng dẫn chạy dự án (Local Development)
+## 🚀 Quy trình Phát triển & Triển khai
 
-Dự án đã được cấu hình sẵn môi trường phát triển cực kỳ tiện lợi với **Docker** và công cụ **Air** (Hot-reloading).
-
-### Yêu cầu tiên quyết
-*   Máy tính đã cài đặt [Docker](https://www.docker.com/) và [Docker Compose](https://docs.docker.com/compose/).
-
-### Khởi động Server
-Bạn chỉ cần mở Terminal tại thư mục gốc của dự án và chạy duy nhất 1 lệnh:
-
+### 1. Chạy dưới máy cá nhân (Local)
+Dự án tích hợp **Air** để tự động Reload code khi bạn nhấn Save:
 ```bash
 docker compose up
 ```
 
-Lệnh này sẽ thực hiện các việc sau một cách tự động:
-1.  Khởi tạo một container PostgreSQL database.
-2.  Tự động chạy các file trong `db/migrations/` để tạo các bảng RBAC, Houses, Rooms.
-3.  Tự động tạo tài khoản `admin` mẫu và các nhóm quyền (Role).
-4.  Khởi động API Server ở địa chỉ: `http://localhost:8080`.
-5.  **Theo dõi (Watch):** Bất cứ khi nào bạn sửa và lưu một file `.go`, server sẽ tự động biên dịch và khởi động lại trong tích tắc (nhờ công cụ Air).
-
-### Dừng Server
+### 2. Chạy Unit Test
 ```bash
-docker compose down
+go test -v ./...
 ```
-*(Lưu ý: Dữ liệu Database được bảo vệ an toàn trong Docker Volume `postgres_data`. Dù bạn có tắt hay bật lại, dữ liệu nhà trọ, user vẫn được giữ nguyên).*
+
+### 3. Tự động triển khai (CI/CD)
+Dự án đã cấu hình sẵn GitHub Actions tại `.github/workflows/deploy.yml`.
+*   Mỗi khi bạn **Push** lên nhánh `main`, Github sẽ tự động chạy **Unit Test**.
+*   Nếu Test vượt qua (PASS), hệ thống sẽ SSH vào VPS và tự động **Deploy** phiên bản mới nhất.
 
 ---
 
-## 📚 Tổ chức Thư mục (Directory Structure)
+## 📚 Tài liệu API (Endpoints)
 
-```text
-tro-go/
-├── cmd/
-│   └── api/
-│       └── main.go           # Điểm khởi đầu của ứng dụng, thiết lập DI, Router, kết nối DB.
-├── db/
-│   └── migrations/           # Chứa các file SQL phục vụ việc nâng cấp/tạo bảng tự động.
-├── internal/                 # Các package nội bộ, không thể import từ dự án khác.
-│   ├── adapter/
-│   │   ├── handler/          # HTTP Controllers (Nhận Request -> Đẩy xuống UseCase -> Trả JSON).
-│   │   └── repository/       # Làm việc trực tiếp với Postgres (Chứa lệnh SQL thuần).
-│   ├── domain/               # Định nghĩa các Struct thực thể (Entities) dùng chung.
-│   ├── port/                 # Định nghĩa các Interface kết nối giữa các tầng.
-│   └── usecase/              # Trái tim dự án: Chứa logic nghiệp vụ (Auth, Tính toán, RBAC).
-├── pkg/
-│   └── config/               # Hàm đọc biến môi trường từ file .env.
-├── .air.toml                 # Cấu hình tính năng Hot-Reloading cho môi trường Dev.
-├── docker-compose.yml        # Thiết lập môi trường Dev bằng Docker.
-├── docker-compose.prod.yml   # Thiết lập môi trường Production (Sử dụng Image siêu nhẹ).
-└── Dockerfile                # Script build ứng dụng thành file nhị phân (Binary) cho Production.
-```
+| Method | Endpoint | Quyền hạn | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/register` | Public | Đăng ký tài khoản |
+| `POST` | `/api/v1/auth/login` | Public | Đăng nhập lấy Token |
+| `GET` | `/api/v1/auth/me` | User | Lấy thông tin cá nhân |
+| `POST` | `/api/v1/houses` | User | Tạo nhà trọ mới |
+| `DELETE` | `/api/v1/houses/:id` | **Admin** | Xoá nhà trọ (Chỉ Admin) |
+| `POST` | `/api/v1/rooms/:id/remind` | User | Gửi mail nhắc nợ tiền phòng |
+
+---
+
+## 🤝 Hỗ trợ
+Nếu có bất kỳ câu hỏi nào về kiến trúc hoặc cách cấu hình, vui lòng liên hệ Ban quản trị dự án.

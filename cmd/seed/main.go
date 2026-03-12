@@ -11,6 +11,7 @@ import (
 	"tro-go/pkg/config"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/jackc/pgx/v5"
 )
 
 func main() {
@@ -27,93 +28,137 @@ func main() {
 	}
 	defer db.Close()
 
-	fmt.Println("🚀 Bắt đầu quá trình Seeding dữ liệu...")
+	fmt.Println("🚀 Bắt đầu quá trình Seeding 10 TRIỆU dữ liệu siêu tốc...")
+	startTime := time.Now()
 
-	// 2. Tạo Nhà trọ (Houses)
-	houseIDs := []int64{}
-	for i := 1; i <= 5; i++ {
-		var houseID int64
-		query := `INSERT INTO houses (name, province, district, ward, address, created_at, updated_at)
-                  VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id`
-		err := db.QueryRow(ctx, query,
-			gofakeit.Name()+" Hostel",
-			"TP. Hồ Chí Minh",
+	// Số lượng cần tạo
+	totalCustomers := 10_000_000
+	totalHouses := 10_000
+	batchSize := 100_000 // Mỗi lần nạp 100k dòng để không bị sập RAM
+
+	// ---------------------------------------------------------
+
+	// BƯỚC 1: CÀO 10 TRIỆU KHÁCH HÀNG (CUSTOMERS)
+
+	// ---------------------------------------------------------
+
+	fmt.Printf("\n⏳ Đang tạo %d Khách hàng...\n", totalCustomers)
+
+	// Dùng 1 biến đếm tịnh tiến để đảm bảo CCCD không bao giờ trùng nhau
+
+	baseIdentityNumber := 100000000000 // Bắt đầu từ 100 tỷ
+
+	for i := 0; i < totalCustomers; i += batchSize {
+
+		// Tạo một mảng 2 chiều chứa dữ liệu của 100,000 khách hàng
+
+		rows := make([][]interface{}, 0, batchSize)
+
+		for j := 0; j < batchSize; j++ {
+
+			// Số CCCD là độc nhất: Base + (Batch Index * Batch Size) + Loop Index
+
+			uniqueCCCD := fmt.Sprintf("%d", baseIdentityNumber+i+j)
+
+			rows = append(rows, []interface{}{
+
+				gofakeit.Name(),
+
+				uniqueCCCD, // CCCD tuyệt đối không trùng
+
+				gofakeit.Phone(),
+
+				gofakeit.Email(),
+
+				gofakeit.Address().Address,
+
+				gofakeit.Gender(),
+
+				time.Now(),
+
+				time.Now(),
+			})
+
+		}
+
+		// Dùng CopyFrom: Đổ thẳng 100,000 dòng vào Postgres trong 1 nhịp
+		_, err := db.CopyFrom(
+			ctx,
+			pgx.Identifier{"customers"},
+			[]string{"full_name", "identity_number", "phone", "email", "address", "gender", "created_at", "updated_at"},
+			pgx.CopyFromRows(rows),
+		)
+		if err != nil {
+			log.Fatalf("Lỗi khi CopyFrom Customers tại batch %d: %v", i, err)
+		}
+
+		fmt.Printf("   ✅ Đã nạp %d / %d khách hàng...\n", i+batchSize, totalCustomers)
+	}
+
+	// ---------------------------------------------------------
+	// BƯỚC 2: CÀO 10,000 NHÀ TRỌ (HOUSES)
+	// (Không nên tạo 10 triệu nhà vì phi thực tế, 10k nhà là rất lớn rồi)
+	// ---------------------------------------------------------
+	fmt.Printf("\n⏳ Đang tạo %d Nhà trọ...\n", totalHouses)
+	houseRows := make([][]interface{}, 0, totalHouses)
+	for i := 0; i < totalHouses; i++ {
+		houseRows = append(houseRows, []interface{}{
+			gofakeit.Company() + " Motel",
+			gofakeit.State(),
 			gofakeit.City(),
 			gofakeit.StreetName(),
 			gofakeit.Address().Address,
-		).Scan(&houseID)
+			time.Now(),
+			time.Now(),
+		})
+	}
+	_, err = db.CopyFrom(
+		ctx,
+		pgx.Identifier{"houses"},
+		[]string{"name", "province", "district", "ward", "address", "created_at", "updated_at"},
+		pgx.CopyFromRows(houseRows),
+	)
+	if err != nil {
+		log.Fatalf("Lỗi khi CopyFrom Houses: %v", err)
+	}
+	fmt.Printf("   ✅ Đã nạp %d Nhà trọ.\n", totalHouses)
 
-		if err != nil {
-			log.Printf("Lỗi tạo nhà trọ: %v", err)
-			continue
-		}
-		houseIDs = append(houseIDs, houseID)
-		fmt.Printf("✅ Đã tạo nhà trọ: %d\n", houseID)
+	// ---------------------------------------------------------
+	// BƯỚC 3: TẠO PHÒNG TRỌ (100 Phòng cho mỗi Nhà = 1 Triệu Phòng)
+	// ---------------------------------------------------------
+	totalRooms := totalHouses * 100
+	fmt.Printf("\n⏳ Đang tạo %d Phòng trọ...\n", totalRooms)
 
-		// 3. Mỗi nhà trọ tạo 10 phòng (Rooms)
-		for j := 1; j <= 10; j++ {
-			var roomID int64
-			query := `INSERT INTO rooms (house_id, name, description, area, price, is_available, created_at, updated_at)
-                      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING id`
-			err := db.QueryRow(ctx, query,
+	for i := 0; i < totalRooms; i += batchSize {
+		roomRows := make([][]interface{}, 0, batchSize)
+		for j := 0; j < batchSize; j++ {
+			// ID nhà trọ random từ 1 đến 10,000
+			houseID := int64(rand.Intn(totalHouses) + 1)
+
+			roomRows = append(roomRows, []interface{}{
 				houseID,
-				fmt.Sprintf("Phòng %d%02d", i, j),
-				gofakeit.Sentence(10),
-				gofakeit.Float64Range(15, 40),           // Diện tích 15-40m2
-				gofakeit.Float64Range(2000000, 6000000), // Giá 2tr-6tr
+				fmt.Sprintf("Phòng %d", gofakeit.Number(100, 999)),
+				gofakeit.Sentence(5),
+				gofakeit.Float64Range(15, 50),
+				gofakeit.Float64Range(1500000, 8000000), // 1.5tr đến 8tr
 				true,
-			).Scan(&roomID)
-			if err != nil {
-				log.Printf("Lỗi tạo phòng: %v", err)
-			}
+				time.Now(),
+				time.Now(),
+			})
 		}
 
-		// 4. Tạo cấu hình điện nước cho nhà trọ
-		queryUtility := `INSERT INTO utility_configs (house_id, electricity_price, water_price, trash_price, internet_price)
-                         VALUES ($1, $2, $3, $4, $5)`
-		db.Exec(ctx, queryUtility, houseID, 3500, 20000, 50000, 100000)
-	}
-
-	// 5. Tạo Khách thuê (Customers)
-	customerIDs := []int64{}
-	for i := 1; i <= 20; i++ {
-		var customerID int64
-		query := `INSERT INTO customers (full_name, identity_number, phone, email, address, gender, created_at, updated_at)
-                  VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING id`
-		err := db.QueryRow(ctx, query,
-			gofakeit.Name(),
-			gofakeit.DigitN(12), // Giả lập số CCCD
-			gofakeit.Phone(),
-			gofakeit.Email(),
-			gofakeit.Address().Address,
-			gofakeit.Gender(),
-		).Scan(&customerID)
-		if err == nil {
-			customerIDs = append(customerIDs, customerID)
-		}
-	}
-	fmt.Printf("✅ Đã tạo %d khách thuê\n", len(customerIDs))
-
-	// 6. Tạo một vài Hợp đồng (Contracts) ngẫu nhiên
-	for i := 0; i < 10; i++ {
-		// Lấy ngẫu nhiên một khách và một phòng (Giả định ID phòng từ 1-50)
-		randomCustomerID := customerIDs[rand.Intn(len(customerIDs))]
-		randomRoomID := int64(rand.Intn(50) + 1)
-
-		query := `INSERT INTO contracts (customer_id, room_id, start_date, deposit, monthly_rent, payment_day, status)
-                  VALUES ($1, $2, $3, $4, $5, $6, 'active')`
-		db.Exec(ctx, query,
-			randomCustomerID,
-			randomRoomID,
-			time.Now().AddDate(0, 0, -rand.Intn(30)), // Ngày bắt đầu trong 30 ngày qua
-			5000000,
-			3000000,
-			5,
+		_, err := db.CopyFrom(
+			ctx,
+			pgx.Identifier{"rooms"},
+			[]string{"house_id", "name", "description", "area", "price", "is_available", "created_at", "updated_at"},
+			pgx.CopyFromRows(roomRows),
 		)
-
-		// Cập nhật trạng thái phòng thành hết trống
-		db.Exec(ctx, "UPDATE rooms SET is_available = false WHERE id = $1", randomRoomID)
+		if err != nil {
+			log.Fatalf("Lỗi khi CopyFrom Rooms tại batch %d: %v", i, err)
+		}
+		fmt.Printf("   ✅ Đã nạp %d / %d phòng trọ...\n", i+batchSize, totalRooms)
 	}
 
-	fmt.Println("✨ Quá trình Seeding hoàn tất! Bạn đã có dữ liệu để học SQL.")
+	duration := time.Since(startTime)
+	fmt.Printf("\n🎉 HOÀN TẤT SEEDING! Tổng thời gian chạy: %v\n", duration)
 }
