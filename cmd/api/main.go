@@ -23,6 +23,7 @@ import (
 	"tro-go/internal/adapter/repository"
 	"tro-go/internal/usecase"
 	"tro-go/pkg/config"
+	"tro-go/pkg/email"
 )
 
 func runMigrations(dbURL string) {
@@ -76,15 +77,14 @@ func main() {
 	houseRepo := repository.NewHouseRepository(dbPool)
 	roomRepo := repository.NewRoomRepository(dbPool)
 	userRepo := repository.NewUserRepository(dbPool)
-	customerRepo := repository.NewCustomerRepository(dbPool)
-	contractRepo := repository.NewContractRepository(dbPool)
+
+	// 5.5 Instantiate Email Sender
+	emailSender := email.NewSMTPEmailSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword)
 
 	// 6. Instantiate UseCases
 	houseUseCase := usecase.NewHouseUseCase(houseRepo)
-	roomUseCase := usecase.NewRoomUseCase(roomRepo)
+	roomUseCase := usecase.NewRoomUseCase(roomRepo, emailSender)
 	userUseCase := usecase.NewUserUseCase(userRepo, cfg.JwtSecret)
-	customerUseCase := usecase.NewCustomerUseCase(customerRepo)
-	contractUseCase := usecase.NewContractUseCase(contractRepo, roomRepo, customerRepo)
 
 	// 7. Setup Echo HTTP Server
 	e := echo.New()
@@ -144,8 +144,6 @@ func main() {
 	handler.NewHouseHandler(houseGroup, houseUseCase)
 	handler.NewRoomHandler(houseGroup, roomUseCase)
 	handler.NewProtectedUserHandler(houseGroup, userUseCase)
-	handler.NewCustomerHandler(houseGroup, customerUseCase)
-	handler.NewContractHandler(houseGroup, contractUseCase)
 
 	// 9. Start Server with Graceful Shutdown
 	go func() {

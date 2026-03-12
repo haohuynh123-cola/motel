@@ -22,6 +22,30 @@ func NewRoomHandler(e *echo.Group, uc port.RoomUseCase) {
 	e.GET("/houses/:house_id/rooms", handler.ListByHouseID)
 	e.PUT("/rooms/:id", handler.Update)
 	e.DELETE("/rooms/:id", handler.Delete)
+	e.POST("/rooms/:id/remind", handler.Remind)
+}
+
+func (h *RoomHandler) Remind(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+	}
+
+	// Đọc email từ body request
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := c.Bind(&req); err != nil || req.Email == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "vui lòng cung cấp email người nhận"})
+	}
+
+	// Gọi xuống tầng UseCase
+	err = h.roomUseCase.SendPaymentReminder(c.Request().Context(), id, req.Email)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "đã gửi email nhắc nhở thành công"})
 }
 
 func (h *RoomHandler) Create(c echo.Context) error {

@@ -40,4 +40,5 @@ type RoomUseCase interface {
 	ListRoomsByHouse(ctx context.Context, houseID int64) ([]*domain.Room, error)
 	UpdateRoom(ctx context.Context, room *domain.Room) error
 	DeleteRoom(ctx context.Context, id int64) error
+	SendPaymentReminder(ctx context.Context, id int64, toEmail string) error
 }
