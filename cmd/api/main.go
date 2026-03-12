@@ -100,30 +100,7 @@ func main() {
 	})
 
 	e.GET("/", func(c echo.Context) error {
-		htmlContent := `
-		<!DOCTYPE html>
-		<html lang="en">
-		<head>
-			<meta charset="UTF-8">
-			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title>Tro-Go API</title>
-			<style>
-				body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; margin: 0; }
-				.card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-				h1 { color: #2563eb; }
-				p { color: #4b5563; }
-			</style>
-		</head>
-		<body>
-			<div class="card">
-				<h1>🏠 Tro-Go API</h1>
-				<p>Hệ thống Backend đã khởi động thành công!</p>
-				<p><i>Trạng thái: 🟢 Đang hoạt động</i></p>
-			</div>
-		</body>
-		</html>
-		`
-		return c.HTML(http.StatusOK, htmlContent)
+		return c.String(http.StatusOK, "Tro-Go API is running")
 	})
 
 	// 8. Register API Handlers
