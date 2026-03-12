@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"tro-go/internal/domain"
+	"tro-go/pkg/contextutil"
 )
 
 // ---------------------------------------------------------
@@ -97,7 +98,9 @@ func TestHouseUseCase_CreateHouse(t *testing.T) {
 			useCase := NewHouseUseCase(mockRepo)
 
 			// D. Thực thi hàm cần test
-			err := useCase.CreateHouse(context.Background(), tc.inputHouse)
+			// Giả lập user có ID = 1 đang gọi hàm
+			ctx := contextutil.WithUserID(context.Background(), 1)
+			err := useCase.CreateHouse(ctx, tc.inputHouse)
 
 			// E. Kiểm tra kết quả (Assert)
 			// So sánh lỗi thực tế (err) với lỗi mong đợi (tc.expectedError)
