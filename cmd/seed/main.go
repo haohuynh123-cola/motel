@@ -32,7 +32,7 @@ func main() {
 	startTime := time.Now()
 
 	// Số lượng cần tạo
-	totalCustomers := 10_000_000
+	totalCustomers := 10_000
 	totalHouses := 10_000
 	batchSize := 100_000 // Mỗi lần nạp 100k dòng để không bị sập RAM
 

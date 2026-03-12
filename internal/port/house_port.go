@@ -10,7 +10,7 @@ import (
 type HouseRepository interface {
 	Create(ctx context.Context, house *domain.House) error
 	GetByID(ctx context.Context, id int64) (*domain.House, error)
-	List(ctx context.Context) ([]*domain.House, error)
+	List(ctx context.Context, cursor, limit int) ([]*domain.House, error)
 	Update(ctx context.Context, house *domain.House) error
 	Delete(ctx context.Context, id int64) error
 }
@@ -28,7 +28,7 @@ type RoomRepository interface {
 type HouseUseCase interface {
 	CreateHouse(ctx context.Context, house *domain.House) error
 	GetHouse(ctx context.Context, id int64) (*domain.House, error)
-	ListHouses(ctx context.Context) ([]*domain.House, error)
+	ListHouses(ctx context.Context, cursor, limit int) ([]*domain.House, error)
 	UpdateHouse(ctx context.Context, house *domain.House) error
 	DeleteHouse(ctx context.Context, id int64) error
 }

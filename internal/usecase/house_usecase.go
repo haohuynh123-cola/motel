@@ -38,8 +38,8 @@ func (u *houseUseCase) GetHouse(ctx context.Context, id int64) (*domain.House, e
 	return u.houseRepo.GetByID(ctx, id)
 }
 
-func (u *houseUseCase) ListHouses(ctx context.Context) ([]*domain.House, error) {
-	return u.houseRepo.List(ctx)
+func (u *houseUseCase) ListHouses(ctx context.Context, cursor, limit int) ([]*domain.House, error) {
+	return u.houseRepo.List(ctx, cursor, limit)
 }
 
 func (u *houseUseCase) UpdateHouse(ctx context.Context, house *domain.House) error {

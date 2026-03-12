@@ -49,16 +49,36 @@ func (r *houseRepository) GetByID(ctx context.Context, id int64) (*domain.House,
 	return house, nil
 }
 
-func (r *houseRepository) List(ctx context.Context) ([]*domain.House, error) {
-	query := `SELECT id, name, address, created_at, updated_at FROM houses ORDER BY id DESC`
+func (r *houseRepository) List(ctx context.Context, cursor, limit int) ([]*domain.House, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20 // Giới hạn mặc định an toàn
+	}
 
-	rows, err := r.db.Query(ctx, query)
+	var query string
+	var args []interface{}
+	var rows pgx.Rows
+	var err error
+
+	if cursor > 0 {
+		query = `SELECT id, name, address, created_at, updated_at
+                 FROM houses
+                 WHERE id < $1
+                 ORDER BY id DESC LIMIT $2`
+		args = append(args, cursor, limit)
+	} else {
+		query = `SELECT id, name, address, created_at, updated_at
+                 FROM houses
+                 ORDER BY id DESC LIMIT $1`
+		args = append(args, limit)
+	}
+
+	rows, err = r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var houses []*domain.House
+	houses := make([]*domain.House, 0)
 	for rows.Next() {
 		h := &domain.House{}
 		if err := rows.Scan(&h.ID, &h.Name, &h.Address, &h.CreatedAt, &h.UpdatedAt); err != nil {

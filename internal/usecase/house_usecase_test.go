@@ -16,7 +16,7 @@ import (
 // MockHouseRepo là một struct giả lập, nó sẽ thoả mãn interface port.HouseRepository
 type MockHouseRepo struct {
 	// Khai báo các hàm ảo (func) để chúng ta có thể tuỳ chỉnh kết quả trả về trong từng Test Case
-	MockCreate func(ctx context.Context, house *domain.House) error
+	MockCreate  func(ctx context.Context, house *domain.House) error
 	MockGetByID func(ctx context.Context, id int64) (*domain.House, error)
 	// (Để ngắn gọn, tạm thời chỉ mock 2 hàm cần dùng. Go cho phép struct không implement đủ interface NẾU chúng ta trick một chút,
 	// nhưng cách tốt nhất là implement đủ các hàm của interface).
@@ -29,7 +29,7 @@ func (m *MockHouseRepo) Create(ctx context.Context, house *domain.House) error {
 func (m *MockHouseRepo) GetByID(ctx context.Context, id int64) (*domain.House, error) {
 	return m.MockGetByID(ctx, id)
 }
-func (m *MockHouseRepo) List(ctx context.Context) ([]*domain.House, error) {
+func (m *MockHouseRepo) List(ctx context.Context, cursor, limit int) ([]*domain.House, error) {
 	return nil, nil // Tạm thời bỏ qua
 }
 func (m *MockHouseRepo) Update(ctx context.Context, house *domain.House) error {
@@ -46,10 +46,10 @@ func (m *MockHouseRepo) Delete(ctx context.Context, id int64) error {
 func TestHouseUseCase_CreateHouse(t *testing.T) {
 	// Table-Driven Tests: Định nghĩa các kịch bản (cases)
 	testCases := []struct {
-		name          string         // Tên kịch bản test
-		inputHouse    *domain.House  // Dữ liệu đầu vào
+		name          string                        // Tên kịch bản test
+		inputHouse    *domain.House                 // Dữ liệu đầu vào
 		mockSetup     func(mockRepo *MockHouseRepo) // Cài đặt hành vi giả của DB
-		expectedError error          // Kết quả mong đợi (Có lỗi hay không?)
+		expectedError error                         // Kết quả mong đợi (Có lỗi hay không?)
 	}{
 		{
 			name: "Thành công - Tạo nhà hợp lệ",
@@ -90,7 +90,7 @@ func TestHouseUseCase_CreateHouse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// A. Khởi tạo Mock Repo
 			mockRepo := &MockHouseRepo{}
-			
+
 			// B. Cài đặt kịch bản cho Mock Repo dựa vào Table Test
 			tc.mockSetup(mockRepo)
 
