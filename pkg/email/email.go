@@ -10,6 +10,7 @@ import (
 // EmailSender định nghĩa hành vi của một bộ gửi email
 type EmailSender interface {
 	SendReminderEmail(toEmail, userName, roomName, amount, dueDate string) error
+	Send(toEmail, subject, body string) error
 }
 
 type smtpEmailSender struct {
@@ -38,7 +39,7 @@ func (s *smtpEmailSender) SendReminderEmail(toEmail, userName, roomName, amount,
 	// Lưu ý: Cần thêm header để email hiển thị đúng tiếng Việt và định dạng HTML
 	subject := "Subject: Thông báo đóng tiền trọ tháng này\n"
 	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-	
+
 	htmlTemplate := `
 	<html>
 		<body>
@@ -81,6 +82,24 @@ func (s *smtpEmailSender) SendReminderEmail(toEmail, userName, roomName, amount,
 	// 4. Gửi email
 	smtpAddr := fmt.Sprintf("%s:%d", s.host, s.port)
 	err = smtp.SendMail(smtpAddr, auth, s.user, []string{toEmail}, body.Bytes())
+	if err != nil {
+		return fmt.Errorf("không thể gửi email: %w", err)
+	}
+
+	return nil
+}
+
+// Send gửi một email chung chung
+func (s *smtpEmailSender) Send(toEmail, subject, body string) error {
+	auth := smtp.PlainAuth("", s.user, s.password, s.host)
+
+	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
+	fullSubject := fmt.Sprintf("Subject: %s\n", subject)
+
+	msg := []byte(fullSubject + mime + body)
+
+	smtpAddr := fmt.Sprintf("%s:%d", s.host, s.port)
+	err := smtp.SendMail(smtpAddr, auth, s.user, []string{toEmail}, msg)
 	if err != nil {
 		return fmt.Errorf("không thể gửi email: %w", err)
 	}

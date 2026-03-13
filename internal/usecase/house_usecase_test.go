@@ -18,8 +18,10 @@ type MockHouseRepo struct {
 	// Khai báo các hàm ảo (func) để chúng ta có thể tuỳ chỉnh kết quả trả về trong từng Test Case
 	MockCreate  func(ctx context.Context, house *domain.House) error
 	MockGetByID func(ctx context.Context, id int64) (*domain.House, error)
-	// (Để ngắn gọn, tạm thời chỉ mock 2 hàm cần dùng. Go cho phép struct không implement đủ interface NẾU chúng ta trick một chút,
-	// nhưng cách tốt nhất là implement đủ các hàm của interface).
+	MockList    func(ctx context.Context, cursor, limit int) ([]*domain.House, error)
+	MockUpdate  func(ctx context.Context, house *domain.House) error
+	MockDelete  func(ctx context.Context, id int64) error
+	MockCount   func(ctx context.Context) (int64, error)
 }
 
 // Implement các hàm bắt buộc của port.HouseRepository
@@ -30,13 +32,16 @@ func (m *MockHouseRepo) GetByID(ctx context.Context, id int64) (*domain.House, e
 	return m.MockGetByID(ctx, id)
 }
 func (m *MockHouseRepo) List(ctx context.Context, cursor, limit int) ([]*domain.House, error) {
-	return nil, nil // Tạm thời bỏ qua
+	return m.MockList(ctx, cursor, limit)
 }
 func (m *MockHouseRepo) Update(ctx context.Context, house *domain.House) error {
-	return nil // Tạm thời bỏ qua
+	return m.MockUpdate(ctx, house)
 }
 func (m *MockHouseRepo) Delete(ctx context.Context, id int64) error {
-	return nil // Tạm thời bỏ qua
+	return m.MockDelete(ctx, id)
+}
+func (m *MockHouseRepo) Count(ctx context.Context) (int64, error) {
+	return m.MockCount(ctx)
 }
 
 // ---------------------------------------------------------

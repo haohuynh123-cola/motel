@@ -15,7 +15,6 @@ type houseRepository struct {
 	db *pgxpool.Pool
 }
 
-// NewHouseRepository creates a new house repository
 func NewHouseRepository(db *pgxpool.Pool) port.HouseRepository {
 	return &houseRepository{db: db}
 }
@@ -23,56 +22,28 @@ func NewHouseRepository(db *pgxpool.Pool) port.HouseRepository {
 func (r *houseRepository) Create(ctx context.Context, house *domain.House) error {
 	query := `INSERT INTO houses (name, address, created_at, updated_at)
 	          VALUES ($1, $2, NOW(), NOW()) RETURNING id, created_at, updated_at`
-
-	err := r.db.QueryRow(ctx, query, house.Name, house.Address).Scan(&house.ID, &house.CreatedAt, &house.UpdatedAt)
-	if err != nil {
-		return err
-	}
-	return nil
+	return r.db.QueryRow(ctx, query, house.Name, house.Address).Scan(&house.ID, &house.CreatedAt, &house.UpdatedAt)
 }
 
 func (r *houseRepository) GetByID(ctx context.Context, id int64) (*domain.House, error) {
 	query := `SELECT id, name, address, created_at, updated_at FROM houses WHERE id = $1`
-
 	house := &domain.House{}
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&house.ID, &house.Name, &house.Address, &house.CreatedAt, &house.UpdatedAt,
-	)
-
+	err := r.db.QueryRow(ctx, query, id).Scan(&house.ID, &house.Name, &house.Address, &house.CreatedAt, &house.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("house not found")
 		}
 		return nil, err
 	}
-
 	return house, nil
 }
 
-func (r *houseRepository) List(ctx context.Context, cursor, limit int) ([]*domain.House, error) {
-	if limit <= 0 || limit > 100 {
-		limit = 20 // Giới hạn mặc định an toàn
-	}
+func (r *houseRepository) List(ctx context.Context, offset, limit int) ([]*domain.House, error) {
+	query := `SELECT id, name, address, created_at, updated_at
+              FROM houses
+              ORDER BY id DESC LIMIT $1 OFFSET $2`
 
-	var query string
-	var args []interface{}
-	var rows pgx.Rows
-	var err error
-
-	if cursor > 0 {
-		query = `SELECT id, name, address, created_at, updated_at
-                 FROM houses
-                 WHERE id < $1
-                 ORDER BY id DESC LIMIT $2`
-		args = append(args, cursor, limit)
-	} else {
-		query = `SELECT id, name, address, created_at, updated_at
-                 FROM houses
-                 ORDER BY id DESC LIMIT $1`
-		args = append(args, limit)
-	}
-
-	rows, err = r.db.Query(ctx, query, args...)
+	rows, err := r.db.Query(ctx, query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -86,40 +57,36 @@ func (r *houseRepository) List(ctx context.Context, cursor, limit int) ([]*domai
 		}
 		houses = append(houses, h)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
 	return houses, nil
+}
+
+func (r *houseRepository) Count(ctx context.Context) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(id) FROM houses`
+	err := r.db.QueryRow(ctx, query).Scan(&count)
+	return count, err
 }
 
 func (r *houseRepository) Update(ctx context.Context, house *domain.House) error {
 	query := `UPDATE houses SET name = $1, address = $2, updated_at = NOW() WHERE id = $3`
-
 	commandTag, err := r.db.Exec(ctx, query, house.Name, house.Address, house.ID)
 	if err != nil {
 		return err
 	}
-
 	if commandTag.RowsAffected() == 0 {
 		return errors.New("house not found")
 	}
-
 	return nil
 }
 
 func (r *houseRepository) Delete(ctx context.Context, id int64) error {
 	query := `DELETE FROM houses WHERE id = $1`
-
 	commandTag, err := r.db.Exec(ctx, query, id)
 	if err != nil {
 		return err
 	}
-
 	if commandTag.RowsAffected() == 0 {
 		return errors.New("house not found")
 	}
-
 	return nil
 }

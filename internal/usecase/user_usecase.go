@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -25,7 +26,6 @@ func NewUserUseCase(userRepo port.UserRepository, jwtSecret string) port.UserUse
 }
 
 func (u *userUseCase) Register(ctx context.Context, user *domain.User) error {
-	// Kiểm tra username đã tồn tại chưa
 	userExist, err := u.userRepo.GetByUsername(ctx, user.Username)
 	if err != nil && !errors.Is(err, port.ErrNotFound) {
 		return err
@@ -35,7 +35,6 @@ func (u *userUseCase) Register(ctx context.Context, user *domain.User) error {
 		return port.ErrUsernameAlreadyExists
 	}
 
-	// Mã hoá (Hash) mật khẩu trước khi lưu vào database
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -46,24 +45,23 @@ func (u *userUseCase) Register(ctx context.Context, user *domain.User) error {
 }
 
 func (u *userUseCase) Login(ctx context.Context, username, password string) (string, error) {
-	// 1. Tìm user theo username
 	user, err := u.userRepo.GetByUsername(ctx, username)
 	if err != nil {
+		log.Printf("Login error: user %s not found: %v\n", username, err)
 		return "", errors.New("invalid credentials")
 	}
 
-	// 2. So sánh mật khẩu user nhập vào với mật khẩu đã mã hoá trong DB
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
+		log.Printf("Login error: password mismatch for user %s\n", username)
 		return "", errors.New("invalid credentials")
 	}
 
-	// 3. Nếu đúng, tạo JWT Token
 	claims := jwt.MapClaims{
 		"id":          user.ID,
 		"username":    user.Username,
 		"permissions": user.Permissions,
-		"exp":         time.Now().Add(time.Hour * 72).Unix(), // Hết hạn sau 3 ngày
+		"exp":         time.Now().Add(time.Hour * 72).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -80,7 +78,6 @@ func (u *userUseCase) GetUser(ctx context.Context, id int64) (*domain.User, erro
 	if err != nil {
 		return nil, err
 	}
-	// Không trả về mật khẩu
 	user.Password = ""
 	return user, nil
 }

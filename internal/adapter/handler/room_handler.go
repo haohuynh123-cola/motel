@@ -23,6 +23,7 @@ func NewRoomHandler(e *echo.Group, uc port.RoomUseCase) {
 	e.PUT("/rooms/:id", handler.Update)
 	e.DELETE("/rooms/:id", handler.Delete)
 	e.POST("/rooms/:id/remind", handler.Remind)
+	e.POST("/rooms/:id/book", handler.BookAppointment)
 }
 
 func (h *RoomHandler) Remind(c echo.Context) error {
@@ -31,7 +32,6 @@ func (h *RoomHandler) Remind(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
 	}
 
-	// Đọc email từ body request
 	var req struct {
 		Email string `json:"email"`
 	}
@@ -39,13 +39,32 @@ func (h *RoomHandler) Remind(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "vui lòng cung cấp email người nhận"})
 	}
 
-	// Gọi xuống tầng UseCase
 	err = h.roomUseCase.SendPaymentReminder(c.Request().Context(), id, req.Email)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "đã gửi email nhắc nhở thành công"})
+}
+
+func (h *RoomHandler) BookAppointment(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+	}
+
+	app := new(domain.Appointment)
+	if err := c.Bind(app); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+	app.RoomID = id
+
+	err = h.roomUseCase.BookAppointment(c.Request().Context(), app)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "đã đặt lịch hẹn xem phòng thành công, vui lòng kiểm tra email của bạn"})
 }
 
 func (h *RoomHandler) Create(c echo.Context) error {

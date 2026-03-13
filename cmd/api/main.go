@@ -19,11 +19,13 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
 	"tro-go/internal/adapter/db/postgres"
+	kafkaAdapter "tro-go/internal/adapter/kafka"
 	"tro-go/internal/adapter/handler"
 	"tro-go/internal/adapter/repository"
 	"tro-go/internal/usecase"
 	"tro-go/pkg/config"
 	"tro-go/pkg/email"
+	"tro-go/pkg/kafka"
 )
 
 func runMigrations(dbURL string) {
@@ -32,7 +34,6 @@ func runMigrations(dbURL string) {
 	var m *migrate.Migrate
 	var err error
 
-	// Retry logic (Thử lại 5 lần, mỗi lần cách nhau 2 giây)
 	for i := 0; i < 5; i++ {
 		m, err = migrate.New("file://db/migrations", dbURL)
 		if err == nil {
@@ -77,14 +78,31 @@ func main() {
 	houseRepo := repository.NewHouseRepository(dbPool)
 	roomRepo := repository.NewRoomRepository(dbPool)
 	userRepo := repository.NewUserRepository(dbPool)
+	chatRepo := repository.NewChatRepository(dbPool)
+	appRepo := repository.NewAppointmentRepository(dbPool)
 
-	// 5.5 Instantiate Email Sender
+	// 5.5 Instantiate Email Sender (Dùng cho Worker)
 	emailSender := email.NewSMTPEmailSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword)
+
+	// 5.6 Initialize Kafka Components
+	kafkaProducer := kafka.NewProducer(cfg.KafkaBrokers, "notifications")
+	notificationProvider := kafkaAdapter.NewNotificationAdapter(kafkaProducer)
+
+	kafkaConsumer := kafka.NewConsumer(cfg.KafkaBrokers, "notifications", "email-group")
+	notificationWorker := usecase.NewNotificationWorker(kafkaConsumer, emailSender)
+	
+	// Start Worker in background
+	go notificationWorker.Start(ctx)
 
 	// 6. Instantiate UseCases
 	houseUseCase := usecase.NewHouseUseCase(houseRepo)
-	roomUseCase := usecase.NewRoomUseCase(roomRepo, emailSender)
+	roomUseCase := usecase.NewRoomUseCase(roomRepo, appRepo, notificationProvider) 
 	userUseCase := usecase.NewUserUseCase(userRepo, cfg.JwtSecret)
+	chatUseCase := usecase.NewChatUseCase(chatRepo)
+
+	// 6.5 Initialize Chat Hub
+	chatHub := handler.NewChatHub(chatUseCase)
+	go chatHub.Run()
 
 	// 7. Setup Echo HTTP Server
 	e := echo.New()
@@ -106,13 +124,14 @@ func main() {
 	// 8. Register API Handlers
 	v1 := e.Group("/api/v1")
 
-	// Public routes (Không cần đăng nhập)
+	// Public routes
 	handler.NewUserHandler(v1, userUseCase)
 
-	// Protected routes (Bắt buộc phải có token JWT)
-	houseGroup := v1.Group("") // Group này dùng chung tiền tố /api/v1 từ v1
+	// Protected routes
+	houseGroup := v1.Group("")
 	houseGroup.Use(echojwt.WithConfig(echojwt.Config{
 		SigningKey: []byte(cfg.JwtSecret),
+		TokenLookup: "header:Authorization:Bearer ,query:token",
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwt.MapClaims)
 		},
@@ -121,6 +140,7 @@ func main() {
 	handler.NewHouseHandler(houseGroup, houseUseCase)
 	handler.NewRoomHandler(houseGroup, roomUseCase)
 	handler.NewProtectedUserHandler(houseGroup, userUseCase)
+	handler.NewChatHandler(houseGroup, chatHub, chatUseCase)
 
 	// 9. Start Server with Graceful Shutdown
 	go func() {
@@ -135,6 +155,10 @@ func main() {
 	<-quit
 
 	log.Println("Gracefully shutting down server...")
+
+	// Close Kafka Producer
+	kafkaProducer.Close()
+	kafkaConsumer.Close()
 
 	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelShutdown()

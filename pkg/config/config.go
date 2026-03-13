@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -19,6 +20,9 @@ type Config struct {
 	SMTPPort     int
 	SMTPUser     string
 	SMTPPassword string
+
+	// Cấu hình Kafka
+	KafkaBrokers []string
 }
 
 func LoadConfig() (*Config, error) {
@@ -34,7 +38,6 @@ func LoadConfig() (*Config, error) {
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		// Dùng 'db' thay vì 'localhost' để mặc định chạy được trong Docker
 		dbURL = "postgres://postgres:postgrespassword@db:5432/tro_go?sslmode=disable"
 	}
 
@@ -51,11 +54,19 @@ func LoadConfig() (*Config, error) {
 		jwtSecret = "my-super-secret-key-change-it-in-production"
 	}
 
-	smtpPort := 587 // Mặc định cho Gmail (TLS)
+	smtpPort := 587
 	if p := os.Getenv("SMTP_PORT"); p != "" {
 		if parsed, err := strconv.Atoi(p); err == nil {
 			smtpPort = parsed
 		}
+	}
+
+	kafkaBrokersStr := os.Getenv("KAFKA_BROKERS")
+	var kafkaBrokers []string
+	if kafkaBrokersStr != "" {
+		kafkaBrokers = strings.Split(kafkaBrokersStr, ",")
+	} else {
+		kafkaBrokers = []string{"kafka:9092"}
 	}
 
 	return &Config{
@@ -67,5 +78,6 @@ func LoadConfig() (*Config, error) {
 		SMTPPort:     smtpPort,
 		SMTPUser:     os.Getenv("SMTP_USER"),
 		SMTPPassword: os.Getenv("SMTP_PASSWORD"),
+		KafkaBrokers: kafkaBrokers,
 	}, nil
 }

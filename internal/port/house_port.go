@@ -6,11 +6,20 @@ import (
 	"tro-go/internal/domain"
 )
 
+type Pagination struct {
+	Data        interface{} `json:"data"`
+	Total       int64       `json:"total"`
+	CurrentPage int         `json:"current_page"`
+	LastPage    int         `json:"last_page"`
+	Limit       int         `json:"limit"`
+}
+
 // HouseRepository defines the interface for house data access
 type HouseRepository interface {
 	Create(ctx context.Context, house *domain.House) error
 	GetByID(ctx context.Context, id int64) (*domain.House, error)
-	List(ctx context.Context, cursor, limit int) ([]*domain.House, error)
+	List(ctx context.Context, offset, limit int) ([]*domain.House, error)
+	Count(ctx context.Context) (int64, error) // Thêm hàm đếm tổng số nhà
 	Update(ctx context.Context, house *domain.House) error
 	Delete(ctx context.Context, id int64) error
 }
@@ -24,11 +33,17 @@ type RoomRepository interface {
 	Delete(ctx context.Context, id int64) error
 }
 
+type AppointmentRepository interface {
+	Create(ctx context.Context, appointment *domain.Appointment) error
+	GetByID(ctx context.Context, id int64) (*domain.Appointment, error)
+	ListByRoomID(ctx context.Context, roomID int64) ([]*domain.Appointment, error)
+}
+
 // HouseUseCase defines the business logic interface for houses
 type HouseUseCase interface {
 	CreateHouse(ctx context.Context, house *domain.House) error
 	GetHouse(ctx context.Context, id int64) (*domain.House, error)
-	ListHouses(ctx context.Context, cursor, limit int) ([]*domain.House, error)
+	ListHouses(ctx context.Context, page, limit int) (*Pagination, error) // Trả về struct Pagination
 	UpdateHouse(ctx context.Context, house *domain.House) error
 	DeleteHouse(ctx context.Context, id int64) error
 }
@@ -41,4 +56,5 @@ type RoomUseCase interface {
 	UpdateRoom(ctx context.Context, room *domain.Room) error
 	DeleteRoom(ctx context.Context, id int64) error
 	SendPaymentReminder(ctx context.Context, id int64, toEmail string) error
+	BookAppointment(ctx context.Context, appointment *domain.Appointment) error
 }
