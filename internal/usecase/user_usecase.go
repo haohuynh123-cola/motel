@@ -72,7 +72,6 @@ func (u *userUseCase) Login(ctx context.Context, username, password string) (str
 
 	return t, nil
 }
-
 func (u *userUseCase) GetUser(ctx context.Context, id int64) (*domain.User, error) {
 	user, err := u.userRepo.GetByID(ctx, id)
 	if err != nil {
@@ -80,4 +79,19 @@ func (u *userUseCase) GetUser(ctx context.Context, id int64) (*domain.User, erro
 	}
 	user.Password = ""
 	return user, nil
+}
+
+func (u *userUseCase) ListUsers(ctx context.Context) (*port.ApiResponse, error) {
+	users, err := u.userRepo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Xóa password trước khi trả về
+	for _, user := range users {
+		user.Password = ""
+	}
+	return &port.ApiResponse{
+		Status: true,
+		Data:   users,
+	}, nil
 }

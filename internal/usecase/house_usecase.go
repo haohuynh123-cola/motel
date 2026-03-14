@@ -32,7 +32,7 @@ func (u *houseUseCase) GetHouse(ctx context.Context, id int64) (*domain.House, e
 	return u.houseRepo.GetByID(ctx, id)
 }
 
-func (u *houseUseCase) ListHouses(ctx context.Context, page, limit int) (*port.Pagination, error) {
+func (u *houseUseCase) ListHouses(ctx context.Context, page, limit int) (*port.ApiResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -54,12 +54,15 @@ func (u *houseUseCase) ListHouses(ctx context.Context, page, limit int) (*port.P
 
 	lastPage := int(math.Ceil(float64(total) / float64(limit)))
 
-	return &port.Pagination{
-		Data:        houses,
-		Total:       total,
-		CurrentPage: page,
-		LastPage:    lastPage,
-		Limit:       limit,
+	return &port.ApiResponse{
+		Status: true,
+		Data:   houses,
+		Meta: &port.Meta{
+			Total:       total,
+			CurrentPage: page,
+			LastPage:    lastPage,
+			Limit:       limit,
+		},
 	}, nil
 }
 

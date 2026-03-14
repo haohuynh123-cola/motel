@@ -28,8 +28,15 @@ func (u *roomUseCase) GetRoom(ctx context.Context, id int64) (*domain.Room, erro
 	return u.roomRepo.GetByID(ctx, id)
 }
 
-func (u *roomUseCase) ListRoomsByHouse(ctx context.Context, houseID int64) ([]*domain.Room, error) {
-	return u.roomRepo.ListByHouseID(ctx, houseID)
+func (u *roomUseCase) ListRoomsByHouse(ctx context.Context, houseID int64) (*port.ApiResponse, error) {
+	rooms, err := u.roomRepo.ListByHouseID(ctx, houseID)
+	if err != nil {
+		return nil, err
+	}
+	return &port.ApiResponse{
+		Status: true,
+		Data:   rooms,
+	}, nil
 }
 
 func (u *roomUseCase) UpdateRoom(ctx context.Context, room *domain.Room) error {

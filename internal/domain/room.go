@@ -11,5 +11,5 @@ type Room struct {
 	Price       float64   `json:"price"`
 	IsAvailable bool      `json:"is_available"`
 	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
 }

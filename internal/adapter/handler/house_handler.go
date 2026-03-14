@@ -27,29 +27,29 @@ func NewHouseHandler(e *echo.Group, houseUseCase port.HouseUseCase) {
 func (h *HouseHandler) Create(c echo.Context) error {
 	house := new(domain.House)
 	if err := c.Bind(house); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 	err := h.houseUseCase.CreateHouse(c.Request().Context(), house)
 	if err != nil {
 		log.Printf("Error creating house: %v\n", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
-	return c.JSON(http.StatusCreated, house)
+	return c.JSON(http.StatusCreated, port.ApiResponse{Status: true, Data: house})
 }
 
 func (h *HouseHandler) GetByID(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "invalid ID format"})
 	}
 	house, err := h.houseUseCase.GetHouse(c.Request().Context(), id)
 	if err != nil {
 		if err.Error() == "house not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusNotFound, port.ApiResponse{Status: false, Data: err.Error()})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
-	return c.JSON(http.StatusOK, house)
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: house})
 }
 
 func (h *HouseHandler) List(c echo.Context) error {
@@ -70,45 +70,45 @@ func (h *HouseHandler) List(c echo.Context) error {
 		}
 	}
 
-	pagination, err := h.houseUseCase.ListHouses(c.Request().Context(), page, limit)
+	response, err := h.houseUseCase.ListHouses(c.Request().Context(), page, limit)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
 
-	return c.JSON(http.StatusOK, pagination)
+	return c.JSON(http.StatusOK, response)
 }
 
 func (h *HouseHandler) Update(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "invalid ID format"})
 	}
 	house := new(domain.House)
 	if err := c.Bind(house); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 	house.ID = id
 	err = h.houseUseCase.UpdateHouse(c.Request().Context(), house)
 	if err != nil {
 		if err.Error() == "house not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusNotFound, port.ApiResponse{Status: false, Data: err.Error()})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
-	return c.JSON(http.StatusOK, map[string]string{"message": "house updated successfully"})
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: "house updated successfully"})
 }
 
 func (h *HouseHandler) Delete(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "invalid ID format"})
 	}
 	err = h.houseUseCase.DeleteHouse(c.Request().Context(), id)
 	if err != nil {
 		if err.Error() == "house not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusNotFound, port.ApiResponse{Status: false, Data: err.Error()})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
-	return c.JSON(http.StatusOK, map[string]string{"message": "house deleted successfully"})
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: "house deleted successfully"})
 }

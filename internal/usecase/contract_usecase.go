@@ -55,6 +55,35 @@ func (u *contractUseCase) CreateContract(ctx context.Context, contract *domain.C
 	return nil
 }
 
-func (u *contractUseCase) GetContract(ctx context.Context, id int64) (*domain.Contract, error) {
-	return u.contractRepo.GetByID(ctx, id)
+func (u *contractUseCase) GetContract(ctx context.Context, id int64) (*port.ApiResponse, error) {
+	contract, err := u.contractRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &port.ApiResponse{
+		Status: true,
+		Data:   contract,
+	}, nil
+}
+
+func (u *contractUseCase) ListAllContracts(ctx context.Context) (*port.ApiResponse, error) {
+	contracts, err := u.contractRepo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &port.ApiResponse{
+		Status: true,
+		Data:   contracts,
+	}, nil
+}
+
+func (u *contractUseCase) ListContractsByHouse(ctx context.Context, houseID int64) (*port.ApiResponse, error) {
+	contracts, err := u.contractRepo.ListByHouseID(ctx, houseID)
+	if err != nil {
+		return nil, err
+	}
+	return &port.ApiResponse{
+		Status: true,
+		Data:   contracts,
+	}, nil
 }

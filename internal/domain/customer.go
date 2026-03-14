@@ -9,8 +9,8 @@ type Customer struct {
 	Phone          string    `json:"phone"`
 	Email          string    `json:"email"`
 	Address        string    `json:"address"`         // Quê quán/Địa chỉ thường trú
-	Birthday       time.Time `json:"birthday"`
-	Gender         string    `json:"gender"`          // Nam/Nữ
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	Birthday       *time.Time `json:"birthday"`
+	Gender         string     `json:"gender"`          // Nam/Nữ
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      *time.Time `json:"updated_at"`
 }

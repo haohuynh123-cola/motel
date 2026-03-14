@@ -60,7 +60,7 @@ func (r *roomRepository) ListByHouseID(ctx context.Context, houseID int64) ([]*d
 	}
 	defer rows.Close()
 
-	var rooms []*domain.Room
+	rooms := []*domain.Room{}
 	for rows.Next() {
 		r := &domain.Room{}
 		if err := rows.Scan(&r.ID, &r.HouseID, &r.Name, &r.Area, &r.Price, &r.IsAvailable, &r.CreatedAt, &r.UpdatedAt); err != nil {

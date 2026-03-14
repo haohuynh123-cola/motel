@@ -29,126 +29,126 @@ func NewRoomHandler(e *echo.Group, uc port.RoomUseCase) {
 func (h *RoomHandler) Remind(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "invalid ID format"})
 	}
 
 	var req struct {
 		Email string `json:"email"`
 	}
 	if err := c.Bind(&req); err != nil || req.Email == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "vui lòng cung cấp email người nhận"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "vui lòng cung cấp email người nhận"})
 	}
 
 	err = h.roomUseCase.SendPaymentReminder(c.Request().Context(), id, req.Email)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "đã gửi email nhắc nhở thành công"})
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: "đã gửi email nhắc nhở thành công"})
 }
 
 func (h *RoomHandler) BookAppointment(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "invalid ID format"})
 	}
 
 	app := new(domain.Appointment)
 	if err := c.Bind(app); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 	app.RoomID = id
 
 	err = h.roomUseCase.BookAppointment(c.Request().Context(), app)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "đã đặt lịch hẹn xem phòng thành công, vui lòng kiểm tra email của bạn"})
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: "đã đặt lịch hẹn xem phòng thành công, vui lòng kiểm tra email của bạn"})
 }
 
 func (h *RoomHandler) Create(c echo.Context) error {
 	room := new(domain.Room)
 	if err := c.Bind(room); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 
 	err := h.roomUseCase.CreateRoom(c.Request().Context(), room)
 	if err != nil {
 		log.Printf("Error creating room: %v\n", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
 
-	return c.JSON(http.StatusCreated, room)
+	return c.JSON(http.StatusCreated, port.ApiResponse{Status: true, Data: room})
 }
 
 func (h *RoomHandler) GetByID(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "invalid ID format"})
 	}
 
 	room, err := h.roomUseCase.GetRoom(c.Request().Context(), id)
 	if err != nil {
 		if err.Error() == "room not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusNotFound, port.ApiResponse{Status: false, Data: err.Error()})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
 
-	return c.JSON(http.StatusOK, room)
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: room})
 }
 
 func (h *RoomHandler) ListByHouseID(c echo.Context) error {
 	houseID, err := strconv.ParseInt(c.Param("house_id"), 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid house ID format"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "invalid house ID format"})
 	}
 
-	rooms, err := h.roomUseCase.ListRoomsByHouse(c.Request().Context(), houseID)
+	response, err := h.roomUseCase.ListRoomsByHouse(c.Request().Context(), houseID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
 
-	return c.JSON(http.StatusOK, rooms)
+	return c.JSON(http.StatusOK, response)
 }
 
 func (h *RoomHandler) Update(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "invalid ID format"})
 	}
 
 	room := new(domain.Room)
 	if err := c.Bind(room); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 	room.ID = id
 
 	err = h.roomUseCase.UpdateRoom(c.Request().Context(), room)
 	if err != nil {
 		if err.Error() == "room not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusNotFound, port.ApiResponse{Status: false, Data: err.Error()})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "room updated successfully"})
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: "room updated successfully"})
 }
 
 func (h *RoomHandler) Delete(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid ID format"})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: "invalid ID format"})
 	}
 
 	err = h.roomUseCase.DeleteRoom(c.Request().Context(), id)
 	if err != nil {
 		if err.Error() == "room not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+			return c.JSON(http.StatusNotFound, port.ApiResponse{Status: false, Data: err.Error()})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "room deleted successfully"})
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: "room deleted successfully"})
 }

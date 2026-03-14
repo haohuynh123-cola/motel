@@ -80,8 +80,11 @@ func main() {
 	userRepo := repository.NewUserRepository(dbPool)
 	chatRepo := repository.NewChatRepository(dbPool)
 	appRepo := repository.NewAppointmentRepository(dbPool)
+	contractRepo := repository.NewContractRepository(dbPool)
+	customerRepo := repository.NewCustomerRepository(dbPool)
+	dashboardRepo := repository.NewDashboardRepository(dbPool)
 
-	// 5.5 Instantiate Email Sender (Dùng cho Worker)
+	// 5.5 Instantiate Email Sender
 	emailSender := email.NewSMTPEmailSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword)
 
 	// 5.6 Initialize Kafka Components
@@ -99,7 +102,10 @@ func main() {
 	roomUseCase := usecase.NewRoomUseCase(roomRepo, appRepo, notificationProvider)
 	userUseCase := usecase.NewUserUseCase(userRepo, cfg.JwtSecret)
 	chatUseCase := usecase.NewChatUseCase(chatRepo)
-
+	contractUseCase := usecase.NewContractUseCase(contractRepo, roomRepo, customerRepo)
+	customerUseCase := usecase.NewCustomerUseCase(customerRepo)
+	dashboardUseCase := usecase.NewDashboardUseCase(dashboardRepo)
+	
 	// 6.5 Initialize Chat Hub
 	chatHub := handler.NewChatHub(chatUseCase)
 	go chatHub.Run()
@@ -107,7 +113,7 @@ func main() {
 	// 7. Setup Echo HTTP Server
 	e := echo.New()
 
-	// Docs Handler (Register early to be outside of auth groups)
+	// Docs Handler
 	handler.NewDocsHandler(e)
 
 	// Middleware
@@ -131,8 +137,8 @@ func main() {
 	handler.NewUserHandler(v1, userUseCase)
 
 	// Protected routes
-	houseGroup := v1.Group("")
-	houseGroup.Use(echojwt.WithConfig(echojwt.Config{
+	protected := v1.Group("")
+	protected.Use(echojwt.WithConfig(echojwt.Config{
 		SigningKey:  []byte(cfg.JwtSecret),
 		TokenLookup: "header:Authorization:Bearer ,query:token",
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
@@ -140,11 +146,13 @@ func main() {
 		},
 	}))
 
-	handler.NewHouseHandler(houseGroup, houseUseCase)
-	handler.NewRoomHandler(houseGroup, roomUseCase)
-
-	handler.NewProtectedUserHandler(houseGroup, userUseCase)
-	handler.NewChatHandler(houseGroup, chatHub, chatUseCase)
+	handler.NewHouseHandler(protected, houseUseCase)
+	handler.NewRoomHandler(protected, roomUseCase)
+	handler.NewProtectedUserHandler(protected, userUseCase)
+	handler.NewChatHandler(protected, chatHub, chatUseCase)
+	handler.NewContractHandler(protected, contractUseCase)
+	handler.NewCustomerHandler(protected, customerUseCase)
+	handler.NewDashboardHandler(protected, dashboardUseCase)
 
 	// 9. Start Server with Graceful Shutdown
 	go func() {

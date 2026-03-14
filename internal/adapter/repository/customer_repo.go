@@ -19,7 +19,7 @@ func NewCustomerRepository(db *pgxpool.Pool) port.CustomerRepository {
 
 func (r *customerRepository) Create(ctx context.Context, customer *domain.Customer) error {
 	query := `INSERT INTO customers (full_name, identity_number, phone, email, address, birthday, gender)
-              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`
+              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at, updated_at`
 
 	err := r.db.QueryRow(ctx, query,
 		customer.FullName,
@@ -29,7 +29,7 @@ func (r *customerRepository) Create(ctx context.Context, customer *domain.Custom
 		customer.Address,
 		customer.Birthday,
 		customer.Gender,
-	).Scan(&customer.ID, &customer.CreatedAt)
+	).Scan(&customer.ID, &customer.CreatedAt, &customer.UpdatedAt)
 
 	if err != nil {
 		return fmt.Errorf("không thể tạo khách thuê: %w", err)
@@ -39,12 +39,12 @@ func (r *customerRepository) Create(ctx context.Context, customer *domain.Custom
 
 func (r *customerRepository) GetByID(ctx context.Context, id int64) (*domain.Customer, error) {
 	customer := &domain.Customer{}
-	query := `SELECT id, full_name, identity_number, phone, email, address, birthday, gender, created_at FROM customers WHERE id = $1`
+	query := `SELECT id, full_name, identity_number, phone, email, address, birthday, gender, created_at, updated_at FROM customers WHERE id = $1`
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&customer.ID, &customer.FullName, &customer.IdentityNumber,
 		&customer.Phone, &customer.Email, &customer.Address,
-		&customer.Birthday, &customer.Gender, &customer.CreatedAt,
+		&customer.Birthday, &customer.Gender, &customer.CreatedAt, &customer.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -52,18 +52,23 @@ func (r *customerRepository) GetByID(ctx context.Context, id int64) (*domain.Cus
 	return customer, nil
 }
 
-func (r *customerRepository) List(ctx context.Context) ([]*domain.Customer, error) {
-	query := `SELECT id, full_name, identity_number, phone, email, address, birthday, gender, created_at FROM customers`
-	rows, err := r.db.Query(ctx, query)
+func (r *customerRepository) List(ctx context.Context, offset, limit int) ([]*domain.Customer, error) {
+	query := `SELECT id, full_name, identity_number, phone, email, address, birthday, gender, created_at, updated_at 
+              FROM customers 
+              ORDER BY id DESC LIMIT $1 OFFSET $2`
+	rows, err := r.db.Query(ctx, query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var customers []*domain.Customer
+	customers := []*domain.Customer{}
 	for rows.Next() {
 		c := &domain.Customer{}
-		err := rows.Scan(&c.ID, &c.FullName, &c.IdentityNumber, &c.Phone, &c.Email, &c.Address, &c.Birthday, &c.Gender, &c.CreatedAt)
+		err := rows.Scan(
+			&c.ID, &c.FullName, &c.IdentityNumber, &c.Phone, &c.Email, &c.Address,
+			&c.Birthday, &c.Gender, &c.CreatedAt, &c.UpdatedAt,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -72,9 +77,16 @@ func (r *customerRepository) List(ctx context.Context) ([]*domain.Customer, erro
 	return customers, nil
 }
 
+func (r *customerRepository) Count(ctx context.Context) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(id) FROM customers`
+	err := r.db.QueryRow(ctx, query).Scan(&count)
+	return count, err
+}
+
 func (r *customerRepository) Update(ctx context.Context, customer *domain.Customer) error {
-	query := `UPDATE customers SET full_name=$1, phone=$2, email=$3, address=$4, birthday=$5, gender=$6, updated_at=NOW() WHERE id=$7`
-	_, err := r.db.Exec(ctx, query, customer.FullName, customer.Phone, customer.Email, customer.Address, customer.Birthday, customer.Gender, customer.ID)
+	query := `UPDATE customers SET full_name=$1, identity_number=$2, phone=$3, email=$4, address=$5, birthday=$6, gender=$7, updated_at=NOW() WHERE id=$8`
+	_, err := r.db.Exec(ctx, query, customer.FullName, customer.IdentityNumber, customer.Phone, customer.Email, customer.Address, customer.Birthday, customer.Gender, customer.ID)
 	return err
 }
 

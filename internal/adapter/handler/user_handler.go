@@ -23,21 +23,22 @@ func NewUserHandler(e *echo.Group, uc port.UserUseCase) {
 func NewProtectedUserHandler(e *echo.Group, uc port.UserUseCase) {
 	handler := &UserHandler{userUseCase: uc}
 	e.GET("/auth/me", handler.GetMe)
+	e.GET("/users", handler.List)
 }
 
 func (h *UserHandler) Register(c echo.Context) error {
 	user := new(domain.User)
 	if err := c.Bind(user); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 
 	err := h.userUseCase.Register(c.Request().Context(), user)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 
 	user.Password = ""
-	return c.JSON(http.StatusCreated, user)
+	return c.JSON(http.StatusCreated, port.ApiResponse{Status: true, Data: user})
 }
 
 type loginRequest struct {
@@ -48,19 +49,22 @@ type loginRequest struct {
 func (h *UserHandler) Login(c echo.Context) error {
 	req := new(loginRequest)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 
 	token, err := h.userUseCase.Login(c.Request().Context(), req.Username, req.Password)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusUnauthorized, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"token": token})
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: map[string]string{"token": token}})
 }
 
 func (h *UserHandler) GetMe(c echo.Context) error {
-	userToken := c.Get("user").(*jwt.Token)
+	userToken, ok := c.Get("user").(*jwt.Token)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, port.ApiResponse{Status: false, Data: "unauthorized"})
+	}
 	claims := userToken.Claims.(*jwt.MapClaims)
 
 	idFloat := (*claims)["id"].(float64)
@@ -68,8 +72,16 @@ func (h *UserHandler) GetMe(c echo.Context) error {
 
 	user, err := h.userUseCase.GetUser(c.Request().Context(), userID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusNotFound, port.ApiResponse{Status: false, Data: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, user)
+	return c.JSON(http.StatusOK, port.ApiResponse{Status: true, Data: user})
+}
+
+func (h *UserHandler) List(c echo.Context) error {
+	response, err := h.userUseCase.ListUsers(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, port.ApiResponse{Status: false, Data: "internal server error"})
+	}
+	return c.JSON(http.StatusOK, response)
 }

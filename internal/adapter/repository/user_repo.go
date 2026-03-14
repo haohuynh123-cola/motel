@@ -101,3 +101,34 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, e
 	}
 	return user, nil
 }
+
+func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
+	query := `
+		SELECT u.id, u.username, u.full_name, u.created_at,
+		       COALESCE(array_agg(p.slug) FILTER (WHERE p.slug IS NOT NULL), '{}') as permissions
+		FROM users u
+		LEFT JOIN user_roles ur ON u.id = ur.user_id
+		LEFT JOIN roles r_table ON ur.role_id = r_table.id
+		LEFT JOIN role_permissions rp ON r_table.id = rp.role_id
+		LEFT JOIN permissions p ON rp.permission_id = p.id
+		GROUP BY u.id
+		ORDER BY u.created_at DESC
+	`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := []*domain.User{}
+	for rows.Next() {
+		u := &domain.User{}
+		err := rows.Scan(&u.ID, &u.Username, &u.FullName, &u.CreatedAt, &u.Permissions)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}

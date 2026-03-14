@@ -6,12 +6,17 @@ import (
 	"tro-go/internal/domain"
 )
 
-type Pagination struct {
-	Data        interface{} `json:"data"`
-	Total       int64       `json:"total"`
-	CurrentPage int         `json:"current_page"`
-	LastPage    int         `json:"last_page"`
-	Limit       int         `json:"limit"`
+type Meta struct {
+	Total       int64 `json:"total"`
+	CurrentPage int   `json:"current_page"`
+	LastPage    int   `json:"last_page"`
+	Limit       int   `json:"limit"`
+}
+
+type ApiResponse struct {
+	Status bool        `json:"status"`
+	Data   interface{} `json:"data"`
+	Meta   *Meta       `json:"meta,omitempty"`
 }
 
 // HouseRepository defines the interface for house data access
@@ -43,7 +48,7 @@ type AppointmentRepository interface {
 type HouseUseCase interface {
 	CreateHouse(ctx context.Context, house *domain.House) error
 	GetHouse(ctx context.Context, id int64) (*domain.House, error)
-	ListHouses(ctx context.Context, page, limit int) (*Pagination, error) // Trả về struct Pagination
+	ListHouses(ctx context.Context, page, limit int) (*ApiResponse, error) // Trả về struct ApiResponse
 	UpdateHouse(ctx context.Context, house *domain.House) error
 	DeleteHouse(ctx context.Context, id int64) error
 }
@@ -52,7 +57,7 @@ type HouseUseCase interface {
 type RoomUseCase interface {
 	CreateRoom(ctx context.Context, room *domain.Room) error
 	GetRoom(ctx context.Context, id int64) (*domain.Room, error)
-	ListRoomsByHouse(ctx context.Context, houseID int64) ([]*domain.Room, error)
+	ListRoomsByHouse(ctx context.Context, houseID int64) (*ApiResponse, error) // Trả về ApiResponse
 	UpdateRoom(ctx context.Context, room *domain.Room) error
 	DeleteRoom(ctx context.Context, id int64) error
 	SendPaymentReminder(ctx context.Context, id int64, toEmail string) error

@@ -21,5 +21,5 @@ type Contract struct {
 	PaymentDay     int            `json:"payment_day"`  // Ngày đóng tiền hàng tháng (1-31)
 	Status         ContractStatus `json:"status"`
 	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
+	UpdatedAt      *time.Time     `json:"updated_at"`
 }

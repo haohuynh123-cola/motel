@@ -52,6 +52,57 @@ func (r *contractRepository) GetByID(ctx context.Context, id int64) (*domain.Con
 	return c, nil
 }
 
+func (r *contractRepository) List(ctx context.Context) ([]*domain.Contract, error) {
+	query := `SELECT id, customer_id, room_id, start_date, end_date, deposit, monthly_rent, payment_day, status, created_at FROM contracts`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	contracts := []*domain.Contract{}
+	for rows.Next() {
+		c := &domain.Contract{}
+		err := rows.Scan(
+			&c.ID, &c.CustomerID, &c.RoomID, &c.StartDate, &c.EndDate,
+			&c.Deposit, &c.MonthlyRent, &c.PaymentDay, &c.Status, &c.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		contracts = append(contracts, c)
+	}
+	return contracts, nil
+}
+
+func (r *contractRepository) ListByHouseID(ctx context.Context, houseID int64) ([]*domain.Contract, error) {
+	query := `SELECT c.id, c.customer_id, c.room_id, c.start_date, c.end_date, c.deposit, c.monthly_rent, c.payment_day, c.status, c.created_at 
+              FROM contracts c
+              JOIN rooms r ON c.room_id = r.id
+              WHERE r.house_id = $1`
+
+	rows, err := r.db.Query(ctx, query, houseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	contracts := []*domain.Contract{}
+	for rows.Next() {
+		c := &domain.Contract{}
+		err := rows.Scan(
+			&c.ID, &c.CustomerID, &c.RoomID, &c.StartDate, &c.EndDate,
+			&c.Deposit, &c.MonthlyRent, &c.PaymentDay, &c.Status, &c.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		contracts = append(contracts, c)
+	}
+	return contracts, nil
+}
+
 func (r *contractRepository) UpdateStatus(ctx context.Context, id int64, status domain.ContractStatus) error {
 	query := `UPDATE contracts SET status = $1, updated_at = NOW() WHERE id = $2`
 	_, err := r.db.Exec(ctx, query, status, id)
