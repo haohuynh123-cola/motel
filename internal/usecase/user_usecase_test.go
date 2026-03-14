@@ -14,6 +14,7 @@ type MockUserRepository struct {
 	GetByUsernameFunc func(ctx context.Context, username string) (*domain.User, error)
 	CreateFunc        func(ctx context.Context, user *domain.User) error
 	GetByIDFunc       func(ctx context.Context, id int64) (*domain.User, error)
+	ListFunc          func(ctx context.Context) ([]*domain.User, error)
 }
 
 func (m *MockUserRepository) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
@@ -24,6 +25,9 @@ func (m *MockUserRepository) Create(ctx context.Context, user *domain.User) erro
 }
 func (m *MockUserRepository) GetByID(ctx context.Context, id int64) (*domain.User, error) {
 	return m.GetByIDFunc(ctx, id)
+}
+func (m *MockUserRepository) List(ctx context.Context) ([]*domain.User, error) {
+	return m.ListFunc(ctx)
 }
 
 func TestUserUseCase_Register(t *testing.T) {
