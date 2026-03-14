@@ -29,6 +29,8 @@ COPY --from=builder /app/api .
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy thư mục migrations vào image cuối cùng
 COPY --from=builder /app/db/migrations ./db/migrations
+# Copy file openapi.yaml để serve tài liệu API
+COPY --from=builder /app/openapi.yaml .
 
 # Expose port 8080
 EXPOSE 8080
