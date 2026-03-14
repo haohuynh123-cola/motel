@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: Tro-Go API Documentation
+  description: |
+    Tài liệu API cho dự án Tro-Go (Quản lý nhà trọ và khách thuê).
+    Dành cho Frontend Team sử dụng ReDoc để render.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+  - url: https://api.trogo.vn/api/v1
+    description: Production server
+
+tags:
+  - name: Users
+    description: Quản lý người dùng, đăng nhập, đăng ký.
+  - name: Houses
+    description: Quản lý thông tin các tòa nhà/nhà trọ.
+  - name: Rooms
+    description: Quản lý các phòng trọ trong tòa nhà.
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Users
+      summary: Đăng nhập vào hệ thống
+      description: Gửi email và mật khẩu để nhận JWT Token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- Auth Schemas ---
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: "password123"
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1..."
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        fullName:
+          type: string
+          example: "Nguyen Van A"
+        email:
+          type: string
+          example: "vana@example.com"
+        role:
+          type: string
+          enum: [admin, host, customer]
+          example: host
+
+    # --- Error Schemas ---
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+          example: "Thông báo lỗi chi tiết"
+        code:
+          type: integer
+          example: 400
+
+  responses:
+    UnauthorizedError:
+      description: Token không hợp lệ hoặc hết hạn.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: "error"
+            message: "Unauthorized"
+            code: 401
+
+    NotFoundError:
+      description: Tài nguyên không tìm thấy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: "error"
+            message: "Resource not found"
+            code: 404

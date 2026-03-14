@@ -19,8 +19,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
 	"tro-go/internal/adapter/db/postgres"
-	kafkaAdapter "tro-go/internal/adapter/kafka"
 	"tro-go/internal/adapter/handler"
+	kafkaAdapter "tro-go/internal/adapter/kafka"
 	"tro-go/internal/adapter/repository"
 	"tro-go/internal/usecase"
 	"tro-go/pkg/config"
@@ -90,13 +90,13 @@ func main() {
 
 	kafkaConsumer := kafka.NewConsumer(cfg.KafkaBrokers, "notifications", "email-group")
 	notificationWorker := usecase.NewNotificationWorker(kafkaConsumer, emailSender)
-	
+
 	// Start Worker in background
 	go notificationWorker.Start(ctx)
 
 	// 6. Instantiate UseCases
 	houseUseCase := usecase.NewHouseUseCase(houseRepo)
-	roomUseCase := usecase.NewRoomUseCase(roomRepo, appRepo, notificationProvider) 
+	roomUseCase := usecase.NewRoomUseCase(roomRepo, appRepo, notificationProvider)
 	userUseCase := usecase.NewUserUseCase(userRepo, cfg.JwtSecret)
 	chatUseCase := usecase.NewChatUseCase(chatRepo)
 
@@ -106,6 +106,9 @@ func main() {
 
 	// 7. Setup Echo HTTP Server
 	e := echo.New()
+
+	// Docs Handler (Register early to be outside of auth groups)
+	handler.NewDocsHandler(e)
 
 	// Middleware
 	e.Use(middleware.Logger())
@@ -130,7 +133,7 @@ func main() {
 	// Protected routes
 	houseGroup := v1.Group("")
 	houseGroup.Use(echojwt.WithConfig(echojwt.Config{
-		SigningKey: []byte(cfg.JwtSecret),
+		SigningKey:  []byte(cfg.JwtSecret),
 		TokenLookup: "header:Authorization:Bearer ,query:token",
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwt.MapClaims)
@@ -139,6 +142,7 @@ func main() {
 
 	handler.NewHouseHandler(houseGroup, houseUseCase)
 	handler.NewRoomHandler(houseGroup, roomUseCase)
+
 	handler.NewProtectedUserHandler(houseGroup, userUseCase)
 	handler.NewChatHandler(houseGroup, chatHub, chatUseCase)
 
